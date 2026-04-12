@@ -1,5 +1,6 @@
 // ── Login ─────────────────────────────────────────────────────
-async function login() {
+//Prueba para render
+/*async function login() {
   const email    = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
 
@@ -11,8 +12,38 @@ async function login() {
   } else {
     showLoginError(data.error || 'Credenciales incorrectas');
   }
-}
+}*/
+//funcion de login para prueba en render
+async function login() {
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
 
+  console.log("Intentando login...");
+
+  try {
+    const res = await fetch(`${API}/users/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+
+    console.log("Response status:", res.status);
+
+    const data = await res.json();
+    console.log("Response data:", data);
+
+    if (data.user) {
+      localStorage.setItem('user', JSON.stringify(data.user));
+      window.location.href = 'dashboard.html';
+    } else {
+      alert(data.error || "Error en login");
+    }
+
+  } catch (err) {
+    console.error("ERROR:", err);
+    alert("No conecta con el servidor");
+  }
+}
 // ── Registro ──────────────────────────────────────────────────
 async function register() {
   const name     = document.getElementById('name').value.trim();
