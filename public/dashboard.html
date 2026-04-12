@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — MoneySnap</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/newstyles.css">
+  <style>
+    body { padding-top: 70px; }
+
+    /* Layout */
+    .dash-layout { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100dvh - 70px); }
+
+    /* Sidebar */
+    .sidebar {
+      background: var(--surface-1); border-right: 1px solid var(--border-subtle);
+      padding: 24px 12px; display: flex; flex-direction: column; gap: 4px;
+      position: sticky; top: 70px; height: calc(100dvh - 70px);
+    }
+    .sidebar-link {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+      border-radius: var(--radius-sm); font-size: 13.5px; font-weight: 500;
+      color: var(--text-secondary); cursor: pointer; border: none; background: none;
+      width: 100%; text-align: left; transition: all .2s;
+    }
+    .sidebar-link:hover { background: var(--surface-2); color: var(--text-primary); }
+    .sidebar-link.active { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent-border); }
+    .sidebar-bottom { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border-subtle); }
+    .sidebar-user { font-size: 12px; color: var(--text-muted); padding: 8px 12px; }
+    .sidebar-user strong { display: block; color: var(--text-primary); font-size: 13px; }
+
+    /* Main */
+    .dash-main { padding: 28px 32px; }
+
+    /* Tarjetas resumen */
+    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+    .s-card { background: var(--surface-1); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 16px 20px; }
+    .s-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; font-family: 'JetBrains Mono', monospace; margin-bottom: 6px; }
+    .s-value { font-size: 22px; font-weight: 800; letter-spacing: -.04em; }
+    .s-value.green  { color: var(--green); }
+    .s-value.rose   { color: var(--rose); }
+    .s-value.amber  { color: var(--amber); }
+
+    /* Filtros */
+    .filters { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .filter-btn { padding: 7px 18px; border-radius: var(--radius-pill); border: 1px solid var(--border-subtle); background: transparent; color: var(--text-secondary); font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .2s; }
+    .filter-btn:hover { background: var(--surface-2); }
+    .filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* Lista de transacciones */
+    .tx-box { background: var(--surface-1); border: 1px solid var(--border-subtle); border-radius: var(--radius); overflow: hidden; }
+    .tx-box-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--border-subtle); }
+    .tx-box-title { font-size: 14px; font-weight: 700; }
+    .tx-row { display: flex; align-items: center; gap: 12px; padding: 13px 20px; border-bottom: 1px solid var(--border-subtle); transition: background .15s; }
+    .tx-row:last-child { border-bottom: none; }
+    .tx-row:hover { background: var(--surface-2); }
+    .tx-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .tx-info { flex: 1; }
+    .tx-desc { display: block; font-size: 13.5px; font-weight: 500; color: var(--text-primary); }
+    .tx-meta { display: block; font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; margin-top: 1px; }
+    .tx-amt  { font-size: 14px; font-weight: 700; letter-spacing: -.02em; min-width: 100px; text-align: right; }
+    .tx-btns { display: flex; gap: 4px; }
+    .tx-btn  { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border-subtle); background: transparent; color: var(--text-muted); cursor: pointer; font-size: 13px; display: grid; place-items: center; transition: all .2s; }
+    .tx-btn:hover     { color: var(--accent); border-color: var(--accent-border); }
+    .tx-btn.del:hover { color: var(--rose);   border-color: rgba(244,63,94,.35); }
+    .tx-empty { text-align: center; padding: 28px; color: var(--text-muted); font-size: 13px; }
+
+    /* Secciones */
+    .dash-section { display: none; }
+    #sec-home { display: block; }
+
+    /* Formulario de categorías inline */
+    .cat-form { display: flex; gap: 10px; margin-bottom: 16px; }
+    .cat-input { flex: 1; padding: 10px 14px; background: var(--surface-2); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); color: var(--text-primary); font-family: inherit; font-size: 13.5px; outline: none; }
+    .cat-input:focus { border-color: var(--accent-border); }
+
+    /* Modal */
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); backdrop-filter: blur(6px); z-index: 2000; align-items: center; justify-content: center; }
+    .modal-box { background: var(--surface-1); border: 1px solid var(--border-subtle); border-radius: var(--radius); padding: 32px; width: 100%; max-width: 420px; box-shadow: 0 40px 80px rgba(0,0,0,.5); animation: fadeUp .3s ease; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+    .modal-title { font-size: 18px; font-weight: 800; margin-bottom: 20px; }
+    .modal-form  { display: flex; flex-direction: column; gap: 13px; }
+    .m-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .05em; font-family: 'JetBrains Mono', monospace; display: block; margin-bottom: 4px; }
+    .m-input { width: 100%; padding: 11px 14px; background: var(--surface-2); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); color: var(--text-primary); font-family: inherit; font-size: 14px; outline: none; transition: border-color .2s; }
+    .m-input:focus { border-color: var(--accent-border); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .modal-footer { display: flex; gap: 10px; margin-top: 6px; }
+    .modal-footer .btn { flex: 1; }
+
+    @media (max-width: 768px) {
+      .dash-layout { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .summary-grid { grid-template-columns: 1fr 1fr; }
+      .dash-main { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar scrolled">
+  <div class="container">
+    <a href="index.html" class="nav-brand"><span class="brand-icon">M</span> MoneySnap</a>
+    <div class="nav-actions">
+      <span style="font-size:13px;color:var(--text-muted);margin-right:8px" id="userName"></span>
+      <button class="btn btn-ghost" onclick="logout()">Salir</button>
+    </div>
+  </div>
+</nav>
+
+<div class="dash-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <button class="sidebar-link active" data-section="home"       onclick="showSection('home')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Resumen
+    </button>
+    <button class="sidebar-link" data-section="categories" onclick="showSection('categories')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Categorías
+    </button>
+    <div class="sidebar-bottom">
+      <div class="sidebar-user">
+        <strong id="userName2"></strong>
+        MoneySnap
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="dash-main">
+
+    <!-- ── SECCIÓN: RESUMEN ─────────────────────── -->
+    <div class="dash-section" id="sec-home">
+
+      <!-- Tarjetas resumen -->
+      <div class="summary-grid">
+        <div class="s-card">
+          <div class="s-label">Ingresos del mes</div>
+          <div class="s-value green" id="totalIncome">₡0</div>
+        </div>
+        <div class="s-card">
+          <div class="s-label">Gastos del mes</div>
+          <div class="s-value rose" id="totalExpense">₡0</div>
+        </div>
+        <div class="s-card">
+          <div class="s-label">Ahorros</div>
+          <div class="s-value amber" id="totalSaving">₡0</div>
+        </div>
+        <div class="s-card">
+          <div class="s-label">Balance disponible</div>
+          <div class="s-value" id="totalBalance">₡0</div>
+        </div>
+      </div>
+
+      <!-- Filtros y botón nueva transacción -->
+      <div class="filters">
+        <button class="filter-btn active" onclick="filterBy('')">Todos</button>
+        <button class="filter-btn" onclick="filterBy('income')">Ingresos</button>
+        <button class="filter-btn" onclick="filterBy('expense')">Gastos</button>
+        <button class="filter-btn" onclick="filterBy('saving')">Ahorros</button>
+        <div style="flex:1"></div>
+        <button class="btn btn-primary" onclick="openModal('createModal')">+ Nueva transacción</button>
+      </div>
+
+      <!-- Lista de transacciones -->
+      <div class="tx-box">
+        <div class="tx-box-header">
+          <span class="tx-box-title">Historial</span>
+        </div>
+        <div id="txList"></div>
+      </div>
+    </div>
+
+    <!-- ── SECCIÓN: CATEGORÍAS ──────────────────── -->
+    <div class="dash-section" id="sec-categories">
+      <h2 style="font-size:22px;font-weight:800;margin-bottom:20px">Categorías</h2>
+
+      <div class="cat-form">
+        <input class="cat-input" id="catName" type="text" placeholder="Nombre de la categoría">
+        <button class="btn btn-primary" onclick="createCategory()">Agregar</button>
+      </div>
+
+      <div class="tx-box">
+        <div id="catList"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── MODAL: CREAR TRANSACCIÓN ──────────────────────────── -->
+<div class="modal" id="createModal" onclick="if(event.target===this)closeModal('createModal')">
+  <div class="modal-box">
+    <div class="modal-title">Nueva transacción</div>
+    <form class="modal-form" id="createForm" onsubmit="return false">
+      <div>
+        <label class="m-label">Tipo</label>
+        <select class="m-input" id="txType">
+          <option value="expense">Gasto</option>
+          <option value="income">Ingreso</option>
+          <option value="saving">Ahorro</option>
+        </select>
+      </div>
+      <div>
+        <label class="m-label">Descripción</label>
+        <input class="m-input" id="txDesc" type="text" placeholder="Ej: Supermercado">
+      </div>
+      <div>
+        <label class="m-label">Monto (₡)</label>
+        <input class="m-input" id="txAmount" type="number" placeholder="0" min="0" step="1">
+      </div>
+      <div>
+        <label class="m-label">Categoría</label>
+        <select class="m-input" id="txCategory"></select>
+      </div>
+      <div id="deadlineWrap" style="display:none">
+        <label class="m-label">Fecha límite</label>
+        <input class="m-input" id="txDeadline" type="date">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('createModal')">Cancelar</button>
+        <button class="btn btn-primary"   onclick="createTransaction()">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── MODAL: EDITAR TRANSACCIÓN ─────────────────────────── -->
+<div class="modal" id="editModal" onclick="if(event.target===this)closeModal('editModal')">
+  <div class="modal-box">
+    <div class="modal-title">Editar transacción</div>
+    <div class="modal-form">
+      <div>
+        <label class="m-label">Monto (₡)</label>
+        <input class="m-input" id="editAmount" type="number" min="0" step="1">
+      </div>
+      <div>
+        <label class="m-label">Descripción</label>
+        <input class="m-input" id="editDesc" type="text">
+      </div>
+      <div>
+        <label class="m-label">Categoría</label>
+        <select class="m-input" id="editCategory"></select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('editModal')">Cancelar</button>
+        <button class="btn btn-primary"   onclick="saveEdit()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/dashboard.js"></script>
+<script>
+  // Sincronizar nombre del usuario en ambos lugares del layout
+  document.addEventListener('DOMContentLoaded', () => {
+    const u = getUser();
+    if (u) {
+      const nombre = u.name + ' ' + u.lastName;
+      document.getElementById('userName').textContent  = nombre;
+      document.getElementById('userName2').textContent = nombre;
+    }
+  });
+</script>
+</body>
+</html>

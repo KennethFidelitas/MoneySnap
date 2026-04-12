@@ -1,0 +1,227 @@
+require('dotenv').config();
+const express  = require('express');
+const cors     = require('cors');
+const path     = require('path');
+const mongoose = require('mongoose');
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// ── Conexión a MongoDB ──────────────────────────────────────────
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log('MongoDB conectado'))
+  .catch(err => console.error(err));
+
+// ── Modelos ─────────────────────────────────────────────────────
+const User        = require('./models/User');
+const Transaction = require('./models/Transaction');
+const Category    = require('./models/Category');
+const Income      = require('./models/Income');
+const Expense     = require('./models/Expense');
+const Saving      = require('./models/Saving');
+
+// ══════════════════════════════════════════════════════════════════
+//  USUARIOS
+// ══════════════════════════════════════════════════════════════════
+
+// Registrar
+app.post('/api/users/register', async (req, res) => {
+  try {
+    const { name, lastName, email, password } = req.body;
+    const existe = await User.findOne({ email });
+    if (existe) return res.status(400).json({ error: 'El correo ya está registrado' });
+    const user = await User.create({ name, lastName, email, password, createdAt: new Date(), updatedAt: new Date() });
+    res.status(201).json({ message: 'Usuario creado', user });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Login
+app.post('/api/users/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email, password, deletedAt: null });
+    if (!user) return res.status(400).json({ error: 'Correo o contraseña incorrectos' });
+    res.json({ message: 'Login exitoso', user });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Listar usuarios
+app.get('/api/users', async (req, res) => {
+  const users = await User.find({ deletedAt: null }).select('-password');
+  res.json(users);
+});
+
+// Obtener un usuario
+app.get('/api/users/:id', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password');
+    if (!user) return res.status(404).json({ error: 'No encontrado' });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Actualizar usuario
+app.put('/api/users/:id', async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(req.params.id, { ...req.body, updatedAt: new Date() }, { new: true }).select('-password');
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Eliminar usuario (soft delete)
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    await User.findByIdAndUpdate(req.params.id, { deletedAt: new Date() });
+    res.json({ message: 'Usuario eliminado' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════
+//  CATEGORÍAS
+// ══════════════════════════════════════════════════════════════════
+
+app.get('/api/categories', async (req, res) => {
+  const cats = await Category.find({ deletedAt: null });
+  res.json(cats);
+});
+
+app.post('/api/categories', async (req, res) => {
+  try {
+    const cat = await Category.create({ name: req.body.name, createdAt: new Date(), updatedAt: new Date() });
+    res.status(201).json(cat);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/categories/:id', async (req, res) => {
+  try {
+    const cat = await Category.findByIdAndUpdate(req.params.id, { name: req.body.name, updatedAt: new Date() }, { new: true });
+    res.json(cat);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/categories/:id', async (req, res) => {
+  try {
+    await Category.findByIdAndUpdate(req.params.id, { deletedAt: new Date() });
+    res.json({ message: 'Categoría eliminada' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════
+//  TRANSACCIONES
+// ══════════════════════════════════════════════════════════════════
+
+app.get('/api/transactions', async (req, res) => {
+  try {
+    const filter = {};
+    if (req.query.userId) filter.userId = req.query.userId;
+    if (req.query.type)   filter.type   = req.query.type;
+    const txs = await Transaction.find(filter).sort({ createdAt: -1 });
+    res.json(txs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/transactions', async (req, res) => {
+  try {
+    const { type, name, amount, description, userId, transactionCategoryId, deadline } = req.body;
+    const tx = await Transaction.create({
+      userId, transactionCategoryId: transactionCategoryId || null,
+      amount, description, type,
+      createdAt: new Date(), updatedAt: new Date()
+    });
+    const sub = { transactionId: tx._id, name: name || description || type, currentBalance: amount, createdAt: new Date(), updatedAt: new Date() };
+    if (type === 'income')  await Income.create(sub);
+    if (type === 'expense') await Expense.create(sub);
+    if (type === 'saving')  await Saving.create({ ...sub, deadline: deadline || null });
+    res.status(201).json({ message: 'Transacción creada', tx });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/transactions/:id', async (req, res) => {
+  try {
+    const tx = await Transaction.findByIdAndUpdate(req.params.id, { ...req.body, updatedAt: new Date() }, { new: true });
+    res.json(tx);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/transactions/:id', async (req, res) => {
+  try {
+    const tx = await Transaction.findByIdAndDelete(req.params.id);
+    if (tx) {
+      if (tx.type === 'income')  await Income.findOneAndDelete({ transactionId: tx._id });
+      if (tx.type === 'expense') await Expense.findOneAndDelete({ transactionId: tx._id });
+      if (tx.type === 'saving')  await Saving.findOneAndDelete({ transactionId: tx._id });
+    }
+    res.json({ message: 'Transacción eliminada' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════
+//  AHORROS
+// ══════════════════════════════════════════════════════════════════
+
+app.get('/api/savings', async (req, res) => {
+  try {
+    const filter = { deletedAt: null };
+    if (req.query.userId) {
+      const txs = await Transaction.find({ userId: req.query.userId, type: 'saving' });
+      filter.transactionId = { $in: txs.map(t => t._id) };
+    }
+    const savings = await Saving.find(filter);
+    res.json(savings);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/savings/:id', async (req, res) => {
+  try {
+    const s = await Saving.findByIdAndUpdate(req.params.id, { ...req.body, updatedAt: new Date() }, { new: true });
+    res.json(s);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/savings/:id', async (req, res) => {
+  try {
+    await Saving.findByIdAndUpdate(req.params.id, { deletedAt: new Date() });
+    res.json({ message: 'Ahorro eliminado' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Frontend estático ────────────────────────────────────────────
+
+app.use(express.static(path.join(__dirname, 'public')));
+app.use((req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Servidor en http://localhost:${PORT}`));

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear cuenta — MoneySnap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/newstyles.css">
+
+        <style>
+
+        /* Two fields side by side */
+        .login-form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        @media (max-width: 420px) {
+            .login-form-row { grid-template-columns: 1fr; }
+            .login-card { padding: 32px 22px; }
+        }
+
+        
+
+        /* Password strength bar */
+        .pw-strength {
+            display: flex;
+            gap: 4px;
+            margin-top: 6px;
+        }
+
+        .pw-bar {
+            flex: 1;
+            height: 3px;
+            border-radius: 2px;
+            background: var(--surface-3);
+            transition: background 0.3s;
+        }
+
+        .pw-bar.active-weak   { background: var(--rose); }
+        .pw-bar.active-medium { background: var(--amber); }
+        .pw-bar.active-strong { background: var(--green); }
+
+        .pw-hint {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Terms */
+        .login-terms {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 12.5px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .login-terms input[type="checkbox"] {
+            margin-top: 2px;
+            accent-color: var(--accent);
+            flex-shrink: 0;
+            width: 14px;
+            height: 14px;
+            cursor: pointer;
+        }
+
+        .login-terms a {
+            color: var(--accent-light);
+            transition: color 0.25s;
+        }
+
+        .login-terms a:hover { color: var(--accent); }
+
+        .login-submit:active { transform: translateY(0); }
+
+        .login-submit:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .login-success {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            background: rgba(34, 197, 94, 0.08);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            color: var(--green);
+        }
+
+        .login-success.visible { display: flex; }
+    </style>
+</head>
+<body class="login-page">
+
+    <!-- NAVBAR -->
+    <nav class="navbar scrolled" id="navbar">
+        <div class="container">
+            <a href="index.html" class="nav-brand">
+                <span class="brand-icon">M</span>
+                MoneySnap
+            </a>
+        </div>
+    </nav>
+
+    <main class="login-main">
+        <div class="login-card">
+
+            <div class="login-brand">
+                <div class="login-brand-icon">M</div>
+                <span class="login-brand-name">MoneySnap</span>
+            </div>
+
+            <h1 class="login-title">Crea tu cuenta</h1>
+            <p class="login-subtitle">Empieza a controlar tus finanzas hoy, gratis</p>
+
+            <!-- Feedback messages -->
+            <div class="login-error" id="registerError">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <span id="registerErrorMsg">Por favor completa todos los campos.</span>
+            </div>
+
+            <div class="login-success" id="registerSuccess">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                <span>¡Cuenta creada! Redirigiendo...</span>
+            </div>
+
+            <div class="login-divider"></div>
+
+            <form class="login-form" id="registerForm" onsubmit="return false;">
+
+                <!-- Nombre + Apellido en fila -->
+                <div class="login-form-row">
+                    <div class="login-field">
+                        <label class="login-label" for="name">Nombre</label>
+                        <input class="login-input" id="name" type="text" placeholder="Ana" autocomplete="given-name" required>
+                    </div>
+                    <div class="login-field">
+                        <label class="login-label" for="lastName">Apellido</label>
+                        <input class="login-input" id="lastName" type="text" placeholder="García" autocomplete="family-name" required>
+                    </div>
+                </div>
+
+                <div class="login-field">
+                    <label class="login-label" for="email">Correo electrónico</label>
+                    <input class="login-input" id="email" type="email" placeholder="tu@correo.com" autocomplete="email" required>
+                </div>
+
+                <div class="login-field">
+                    <label class="login-label" for="password">Contraseña</label>
+                    <input class="login-input" id="password" type="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password" required>
+                    <!-- Barra de fortaleza -->
+                    <div class="pw-strength" id="pwStrength">
+                        <div class="pw-bar" id="bar1"></div>
+                        <div class="pw-bar" id="bar2"></div>
+                        <div class="pw-bar" id="bar3"></div>
+                    </div>
+                    <span class="pw-hint" id="pwHint"></span>
+                </div>
+
+                <!-- Términos -->
+                <label class="login-terms">
+                    <input type="checkbox" id="terms" required>
+                    Acepto los <a href="#">Términos de servicio</a> y la <a href="#">Política de privacidad</a>
+                </label>
+
+                <button class="login-submit" type="submit" id="submitBtn" onclick="register()">
+                    Crear cuenta →
+                </button>
+            </form>
+
+            <p class="login-register">
+                ¿Ya tienes cuenta? <a href="login.html">Inicia sesión</a>
+            </p>
+        </div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        document.getElementById('navbar').classList.add('scrolled');
+
+        /* ── Password strength indicator ── */
+        const pwInput   = document.getElementById('password');
+        const bar1      = document.getElementById('bar1');
+        const bar2      = document.getElementById('bar2');
+        const bar3      = document.getElementById('bar3');
+        const pwHint    = document.getElementById('pwHint');
+
+        const labels = ['', 'Débil', 'Regular', 'Fuerte'];
+        const classes = ['', 'active-weak', 'active-medium', 'active-strong'];
+
+        pwInput.addEventListener('input', () => {
+            const val = pwInput.value;
+            let score = 0;
+            if (val.length >= 8) score++;
+            if (/[A-Z]/.test(val) && /[0-9]/.test(val)) score++;
+            if (/[^A-Za-z0-9]/.test(val)) score++;
+
+            [bar1, bar2, bar3].forEach((b, i) => {
+                b.className = 'pw-bar';
+                if (i < score) b.classList.add(classes[score]);
+            });
+
+            pwHint.textContent = val.length ? labels[score] : '';
+        });
+
+        /* ── Helpers callable from auth.js ── */
+        function showRegisterError(msg) {
+            const el = document.getElementById('registerError');
+            if (msg) document.getElementById('registerErrorMsg').textContent = msg;
+            el.classList.add('visible');
+            document.getElementById('registerSuccess').classList.remove('visible');
+        }
+
+        function showRegisterSuccess() {
+            document.getElementById('registerSuccess').classList.add('visible');
+            document.getElementById('registerError').classList.remove('visible');
+        }
+    </script>
+</body>
+</html>
