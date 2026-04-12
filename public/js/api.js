@@ -1,4 +1,6 @@
-const API = 'http://localhost:3000/api';
+//solo para uso local, se comento para usar en render
+//const API = 'http://localhost:3000/api';
+const API = 'https://moneysnap-83ix.onrender.com/api';
 
 // Guarda y lee el usuario en localStorage
 function getUser() {
