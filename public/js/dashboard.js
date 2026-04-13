@@ -196,12 +196,32 @@ async function deleteCategory(id) {
 
 // ── Secciones del dashboard ────────────────────────────────────
 function showSection(name) {
+  // Ocultar todas las secciones
   document.querySelectorAll('.dash-section').forEach(s => s.style.display = 'none');
-  document.getElementById('sec-' + name).style.display = 'block';
+
+  // Mostrar la sección seleccionada
+  const section = document.getElementById('sec-' + name);
+  if (section) {
+    section.style.display = 'block';
+  }
+
+  // Marcar el botón activo en el sidebar
   document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
-  document.querySelector(`[data-section="${name}"]`).classList.add('active');
-  if (name === 'categories') loadCategoriesPanel();
+  const link = document.querySelector(`[data-section="${name}"]`);
+  if (link) {
+    link.classList.add('active');
+  }
+
+  // Lógica específica por sección
+  if (name === 'categories') {
+    loadCategoriesPanel();
+  }
+  if (name === 'dates') {
+    // Mostrar todas las transacciones del usuario al entrar
+    renderDateResults(transactions);
+  }
 }
+
 
 // ── Modales ────────────────────────────────────────────────────
 function openModal(id)  { document.getElementById(id).style.display = 'flex'; }
@@ -213,3 +233,57 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('deadlineWrap').style.display = this.value === 'saving' ? '' : 'none';
   });
 });
+
+
+async function searchByDates() {
+  const start = document.getElementById('dateStart').value;
+  const end   = document.getElementById('dateEnd').value;
+
+  if (!start || !end) return alert("Selecciona ambas fechas.");
+
+  const res = await fetch(`/api/transactions/bydate?userId=${user._id}&start=${start}&end=${end}`);
+  const data = await res.json();
+
+  if (!data.length) {
+    document.getElementById('dateResults').innerHTML = '<p class="tx-empty">No hay información en ese rango.</p>';
+    return;
+  }
+
+  renderDateResults(data);
+}
+
+
+function renderDateResults(list) {
+  const el = document.getElementById('dateResults');
+  if (!list.length) {
+    el.innerHTML = '<p class="tx-empty">No hay transacciones.</p>';
+    return;
+  }
+
+  const labels = { income: 'Ingreso', expense: 'Gasto', saving: 'Ahorro' };
+  const colors = { income: 'var(--green)', expense: 'var(--rose)', saving: 'var(--amber)' };
+
+  el.innerHTML = list.map(t => {
+    const amt   = parseFloat(t.amount?.$numberDecimal || t.amount || 0);
+    const date  = new Date(t.createdAt).toLocaleDateString('es-CR');
+    const color = colors[t.type] || 'var(--text-muted)';
+    return `
+    <div class="tx-row">
+      <span class="tx-dot" style="background:${color}"></span>
+      <div class="tx-info">
+        <span class="tx-desc">${t.description || 'Sin descripción'}</span>
+        <span class="tx-meta">${labels[t.type] || t.type} · ${date}</span>
+      </div>
+      <span class="tx-amt" style="color:${color}">₡${amt.toLocaleString('es-CR')}</span>
+    </div>`;
+  }).join('');
+}
+
+
+function clearDateSearch() {
+  document.getElementById('dateStart').value = '';
+  document.getElementById('dateEnd').value   = '';
+  // Mostrar todas las transacciones del usuario otra vez
+  renderDateResults(transactions);
+}
+

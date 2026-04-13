@@ -258,6 +258,35 @@ app.delete('/api/savings/:id', async (req, res) => {
   }
 });
 
+
+app.get('/api/transactions/bydate', async (req, res) => {
+  try {
+    const { userId, start, end } = req.query;
+    const filter = {};
+
+    // Convertir userId a ObjectId si viene en la query
+    if (userId) {
+      filter.userId = new mongoose.Types.ObjectId(userId);
+    }
+
+    // Filtrar por fechas
+    if (start && end) {
+      filter.createdAt = { $gte: new Date(start), $lte: new Date(end) };
+    } else if (start) {
+      filter.createdAt = { $gte: new Date(start) };
+    } else if (end) {
+      filter.createdAt = { $lte: new Date(end) };
+    }
+
+    const txs = await Transaction.find(filter).sort({ createdAt: -1 });
+    res.json(txs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
 // ── Frontend estático ────────────────────────────────────────────
 
 app.use(express.static(path.join(__dirname, 'public')));
