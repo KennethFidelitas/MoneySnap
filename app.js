@@ -116,12 +116,26 @@ app.put('/api/categories/:id', async (req, res) => {
 
 app.delete('/api/categories/:id', async (req, res) => {
   try {
-    await Category.findByIdAndUpdate(req.params.id, { deletedAt: new Date() });
-    res.json({ message: 'Categoría eliminada' });
+    const categoryId = req.params.id;
+
+    // Verificar si la categoría está ligada a alguna transacción
+    const linkedTx = await Transaction.findOne({ transactionCategoryId: categoryId });
+    if (linkedTx) {
+      return res.status(400).json({ error: 'La categoría está siendo utilizada en transacciones y no puede eliminarse.' });
+    }
+
+    // Eliminar realmente de la colección
+    const deletedCat = await Category.findByIdAndDelete(categoryId);
+    if (!deletedCat) {
+      return res.status(404).json({ error: 'Categoría no encontrada' });
+    }
+
+    res.json({ message: 'Categoría eliminada correctamente' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // ══════════════════════════════════════════════════════════════════
 //  TRANSACCIONES
@@ -159,12 +173,40 @@ app.post('/api/transactions', async (req, res) => {
 
 app.put('/api/transactions/:id', async (req, res) => {
   try {
-    const tx = await Transaction.findByIdAndUpdate(req.params.id, { ...req.body, updatedAt: new Date() }, { new: true });
-    res.json(tx);
+    const tx = await Transaction.findByIdAndUpdate(
+      req.params.id,
+      { ...req.body, updatedAt: new Date() },
+      { new: true }
+    );
+
+    if (!tx) return res.status(404).json({ error: 'Transacción no encontrada' });
+
+    // Sincronizar con la colección secundaria
+    if (tx.type === 'income') {
+      await Income.findOneAndUpdate(
+        { transactionId: tx._id },
+        { name: req.body.name || tx.description, currentBalance: req.body.amount, updatedAt: new Date() }
+      );
+    }
+    if (tx.type === 'expense') {
+      await Expense.findOneAndUpdate(
+        { transactionId: tx._id },
+        { name: req.body.name || tx.description, currentBalance: req.body.amount, updatedAt: new Date() }
+      );
+    }
+    if (tx.type === 'saving') {
+      await Saving.findOneAndUpdate(
+        { transactionId: tx._id },
+        { name: req.body.name || tx.description, currentBalance: req.body.amount, deadline: req.body.deadline, updatedAt: new Date() }
+      );
+    }
+
+    res.json({ message: 'Transacción actualizada', tx });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 app.delete('/api/transactions/:id', async (req, res) => {
   try {

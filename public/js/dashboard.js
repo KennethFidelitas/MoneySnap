@@ -170,12 +170,29 @@ async function editCategory(id, currentName) {
 }
 
 async function deleteCategory(id) {
-  if (!confirm('¿Eliminar categoría?')) return;
-  await apiDeleteCategory(id);
-  await loadCategoriesPanel();
-  categories = await apiGetCategories();
-  fillCategorySelects();
+  if (!confirm("¿Seguro que deseas eliminar esta categoría?")) return;
+
+  try {
+    const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error || "No se pudo eliminar la categoría");
+      return;
+    }
+
+    alert(data.message); 
+
+    await loadCategoriesPanel();    
+    categories = await apiGetCategories(); 
+    fillCategorySelects();             
+  } catch (err) {
+    console.error(err);
+    alert("Error al eliminar la categoría");
+  }
 }
+
+
 
 // ── Secciones del dashboard ────────────────────────────────────
 function showSection(name) {
